@@ -1,6 +1,1 @@
-total 12
--rw-r--r-- 1 ivan users    0 Dec 18 13:21 file2
-drwxr-xr-x 2 ivan users 4096 Dec 18 13:38 includes
--rw-r--r-- 1 ivan users   15 Dec 18 15:30 infile
--rw-r--r-- 1 ivan users    0 Dec 18 15:31 outfile
--rw-r--r-- 1 ivan users   66 Dec 18 13:32 pipex.c
+ 3  4 19
