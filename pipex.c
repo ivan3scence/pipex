@@ -66,7 +66,7 @@ t_pip	*create_elem(int argc, char **argv)
 	pip->outfile = argv[argc - 1];
 	check_infile(pip);
 	check_outfile(pip);
-	pip->comands = (argv + 2);
+	pip->comands = &argv[2];
 	return (pip);
 }
 
@@ -115,40 +115,35 @@ static void	change_stdin(t_pip *pip)
 	close(fd);
 }
 
+/*static void del_elem(t_pip *pip)
+{
+	if (!pip)
+		return ;
+	if (!*pip)
+	{
+		pip = NULL;
+		return ;
+	}
+	free(pip);
+	pip = NULL;
+}*/
+
 int	main(int argc, char **argv)
 {
 	t_pip	*pip;
-	char	*ar[2];
-	//int	status;
-	//int	i;
+	char	*ar[3];
 	pid_t	pid;
-	char	*buf;
-	char	*buf2="";
-	char	*infile[2];
 
 	pip = validate(argc, argv);
 	change_stdout(pip);
 	change_stdin(pip);
-	buf = get_next_line(0);
-	while (buf)
-	{
-		infile[0] = ft_strjoin(buf2, buf);
-		free(buf);
-		if (*buf2)
-			free(buf2);
-		buf2 = infile[0];
-		buf = get_next_line(1);
-	}
-	free(buf2);
-	infile[1] = NULL;
-	ar[0] = "-l\0";
+	ar[0] = "-l";
 	ar[1] = NULL;
-	//status = 0;
 	pid = fork();
 	argc -= 1;
 	if (!pid)
 	{
-		execve("/bin/wc", ar, NULL);
+		execve("/usr/bin/wc", ar, NULL);
 		exit(0);
 	}
 	/*else
