@@ -100,7 +100,6 @@ static int	**multipipe(int argc, int m)
 	if (!fd)
 		exitmalloc(0, fd);
 	i = -1;
-	ft_putnbr_fd(argc - 2 - m, 1);
 	while (++i < argc - 2 - m)
 	{
 		fd[i] = (int *)malloc(sizeof(int) * 2);
@@ -108,7 +107,6 @@ static int	**multipipe(int argc, int m)
 			exitmalloc(i, fd);
 		if (pipe(fd[i]) == -1)
 			exitmalloc(i, fd);
-		ft_putnbr_fd(fd[i][1], 1);
 	}
 	return (fd);
 }
