@@ -6,7 +6,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-#include "../get_next_line.h"
+#include "../gnl/get_next_line.h"
 //#include<process.h>
 #include<errno.h>
 //#include<dos.h>
