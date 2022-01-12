@@ -6,7 +6,7 @@
 /*   By: sdonny <marvin@42.fr>                      +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2022/01/10 16:06:53 by sdonny            #+#    #+#             */
-/*   Updated: 2022/01/10 16:06:58 by sdonny           ###   ########.fr       */
+/*   Updated: 2022/01/12 17:59:47 by sdonny           ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -91,16 +91,16 @@ static void	exitmalloc(int quantity, int **fd)
 	exit(1);
 }
 
-static int	**multipipe(int argc, int m)
+static int	**multipipe(int m)
 {
 	int	i;
 	int	**fd;
 
-	fd = (int **)malloc(sizeof(int *) * (argc - 2 - m));
+	fd = (int **)malloc(sizeof(int *) * m);
 	if (!fd)
 		exitmalloc(0, fd);
 	i = -1;
-	while (++i < argc - 2 - m)
+	while (++i < m)
 	{
 		fd[i] = (int *)malloc(sizeof(int) * 2);
 		if (!fd[i])
@@ -111,12 +111,12 @@ static int	**multipipe(int argc, int m)
 	return (fd);
 }
 
-static void	exitpid(int **fd, pid_t *pid, int quantity)
+static void	exitpid(int **fd, pid_t *pid, int quantity, char *desc)
 {
 	int	i;
 
 	i = -1;
-	perror("pid - rip");
+	perror(desc);
 	while (++i < quantity + 1)
 		free(fd[i]);
 	free(fd);
@@ -126,20 +126,7 @@ static void	exitpid(int **fd, pid_t *pid, int quantity)
 	exit(1);
 }
 
-static char	**cmdparse(char *old)
-{
-	char	**new;
-	char	*tmp;
-
-	new = ft_split(old, ' ');
-	tmp = new[0];
-	new[0] = ft_strjoin("/bin/", tmp);
-	free(tmp);
-	tmp = NULL;
-	return (new);
-}
-
-static void	cleancmd(char **cmd)
+static void	cleansplit(char **cmd)
 {
 	int	i;
 
@@ -148,6 +135,47 @@ static void	cleancmd(char **cmd)
 		free(cmd[i]);
 	free(cmd);
 	cmd = NULL;
+}
+
+static char	*checkpath(char *tmp, char **envp)
+{
+	char	**paths;
+	char	*path;
+	char	*slesh;
+	int		i;
+
+	i = -1;
+	while(ft_strnstr(envp[++i], "PATH", 4) == 0)
+		;
+	paths = ft_split(envp[i] + 5, ':');
+	i = -1;
+	while (paths[++i])
+	{
+		slesh = ft_strjoin(paths[i], "/");
+		path = ft_strjoin(slesh, tmp);
+		free(slesh);
+		if (access(path, F_OK) == 0)
+		{
+			cleansplit(paths);
+			return (path);
+		}
+		free(path);
+	}
+	cleansplit(paths);
+	return (NULL);
+}
+
+static char	**cmdparse(char *old, char **envp)
+{
+	char	**new;
+	char	*tmp;
+
+	new = ft_split(old, ' ');
+	tmp = new[0];
+	new[0] = checkpath(tmp, envp);
+	free(tmp);
+	tmp = NULL;
+	return (new);
 }
 
 static pid_t	*forks(int **fd, int quantity, char	**argv, char **envp)
@@ -164,13 +192,14 @@ static pid_t	*forks(int **fd, int quantity, char	**argv, char **envp)
 	{
 		pid[m] = fork();
 		if (pid[m] < 0)
-			exitpid(fd, pid, quantity);
+			exitpid(fd, pid, quantity,"fork");
 		if (!pid[m])
 		{
 			close_fd(quantity + 1, m, fd);
-			cmd = cmdparse(argv[m + 2]);
-			execve(cmd[0], cmd, envp);
-			cleancmd(cmd);
+			cmd = cmdparse(argv[m + 2 + 1], envp);
+			if (execve(cmd[0], cmd, envp) == -1)
+				exitpid(fd, pid, quantity, "execve");
+			cleansplit(cmd);
 			close(0);
 			close(1);
 			exit(0);
@@ -190,10 +219,8 @@ static int	parentread(char *cmp, int fd, char *filename)
 		file = 0;
 	if (file == -1)
 		return (-1);
-	//ft_putstr_fd(cmp, 1);
 	while (1)
 	{
-		//ft_putstr_fd("gg\n", 1);
 		buf = get_next_line(file);
 		if ((cmp && ft_strncmp(buf, cmp, ft_strlen(cmp)) == 0)
 			|| (!buf && !cmp))
@@ -221,9 +248,9 @@ static int	parentwrite(int fd, char *filename, int flag)
 	while (1)
 	{
 		buf = get_next_line(fd);
+		ft_putstr_fd(buf, file);
 		if (!buf)
 			break ;
-		ft_putstr_fd(buf, file);
 		free(buf);
 	}
 	close(fd);
@@ -236,7 +263,7 @@ static void	waitchildren(pid_t *pid, int **fd, int argc)
 	int	m;
 
 	m = -1;
-	while (++m < argc - 3)
+	while (++m < argc)
 	{
 		waitpid(pid[m], NULL, 0);
 		free(fd[m]);
@@ -248,8 +275,9 @@ static void	waitchildren(pid_t *pid, int **fd, int argc)
 
 int	main(int argc, char **argv, char **envp)
 {
-	int	**fd;
-	int	m;
+	int		**fd;
+	int		m;
+	int		check;
 	pid_t	*pid;
 
 	if (argc < 4)
@@ -258,17 +286,17 @@ int	main(int argc, char **argv, char **envp)
 		exit(1);
 	}
 	m = validate(argc, argv);
-	fd = multipipe(argc, m);
+	fd = multipipe(argc - 2 - m);
 	pid = forks(fd, argc - 3 - m, argv, envp);
 	close_fd(argc - 2 - m, -1, fd);
 	if (!m)
-		m = parentread(NULL, fd[0][1], argv[1]);
+		check = parentread(NULL, fd[0][1], argv[1]);
 	else
-		m = parentread(argv[2], fd[0][1], NULL);
-	if (m == -1)
-		exitpid(fd, pid, argc);
-	m = parentwrite(fd[argc - 3][0], argv[argc - 1], 1);
-	if (m == -1)
-		exitpid(fd, pid, argc);
-	waitchildren(pid, fd, argc);
+		check = parentread(argv[2], fd[0][1], NULL);
+	if (check == -1)
+		exitpid(fd, pid, argc, "parentread");
+	check = parentwrite(fd[argc - 3 - m][0], argv[argc - 1], m);
+	if (check == -1)
+		exitpid(fd, pid, argc, "parentwrite");
+	waitchildren(pid, fd, argc - 3 - m);
 }
