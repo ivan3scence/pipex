@@ -40,7 +40,7 @@ ${LIBFT}:
 	${MAKE} -C ${LIBFTDIR}
 
 ${NAME}:	${LIBFT} ${SOURCES} ${HEADERS}
-	cc -Wall -Wextra -Werror -L ${LIBFTDIR} -lft ${SOURCES} -o $@
+	cc -Wall -Wextra -Werror ${SOURCES} -o $@ -L ${LIBFTDIR} -lft
 
 bonus:	${BONUS}
 
